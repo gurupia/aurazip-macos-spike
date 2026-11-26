@@ -1,0 +1,39 @@
+name: macOS build spike
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: macOS .app/.dmg
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch 7zz (macos)
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/fetch_7zz.ps1 -Os macos
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build macOS bundle
+        working-directory: src-tauri
+        run: cargo tauri build --bundles app,dmg
+
+      - name: Upload .dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: spike-dmg
+          path: src-tauri/target/release/bundle/dmg/*.dmg
+          if-no-files-found: error
